@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Send Message</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <link href="https://cdn.datatables.net/1.10.19/css/dataTables.bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+    <script src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.10.19/js/dataTables.bootstrap.min.js"></script>
+    <style>
+        #message{
+            width: 500px;
+            height: 35px;
+        }
+        #test{
+            width: 486px;
+            height: 42px;
+        }
+        #example_filter{
+            text-align: end;
+        }
+        #example_paginate{
+            text-align: end;
+        }
+        #back{
+            float: right;
+            color: white;
+            background-color: black;
+        }
+        #delete{
+            float: right;
+        }
+        #days{
+            width: 20%;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2 align="left">Reddit Page Send Message</h2>
+    <h4 align="left">Date Filters</h4>
+    <select id="days" class="form-control" onclick="initDate()">
+        <option value="0">All</option>
+        <option value="7">Last 7 Days</option>
+        <option value="14">Last 14 Days</option>
+        <option value="30">Last 30 Days</option>
+        <option value="60">Last 60 Days</option>
+    </select>
+    <br>
+    <a type="button" name="back" id="back" href="/" class="btn btn-default" >Home Page</a>
+    &nbsp;<button type="button" id="delete" onclick="DeleteBtn()" class="btn btn-danger m-b-10 float-right" data-toggle="model" data-target="#exampleModel">Delete</button>
+    <br>
+    <br>
+    <form>
+        <table id="example" class="table table-striped table-bordered" style="width:100%">
+            <thead>
+            <tr>
+                <th>SrNo</th>
+                <th>UserName</th>
+                <th>Title</th>
+                <th>SubReddit</th>
+                <th>Keyword</th>
+                <th style="width: 130px;">Date</th>
+                <th>Message</th>
+                <th>Submit</th>
+                <th>Select</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for i in data%}
+            <tr>
+                <td>{{forloop.counter}}</td>
+                <td>{{i.name}}</td>
+                <td>{{i.title}}</td>
+                <td>{{i.subreddit}}</td>
+                <td>{{i.keyword}}</td>
+                <td style="width: 130px;">{{i.postingdate}}</td>
+                <td><textarea name="{{i.name}}" id="{{i.name}}" cols="25" rows="2"></textarea></td>
+                <td><button type="button" onclick="SendMessage('{{i.name}}')" class="btn btn-default">Send Message</button></td>
+                <td><input type="checkbox" id="myCheck" style="display: inline;" name="myCheck" value={{i.id}}></td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </form>
+</div>
+<script>
+    $(document).ready(function() {
+        $('#example').DataTable();
+    } );
+
+    function initDate()
+    {
+        var days = $('#days').val();
+        var my_data = {
+            "days": days,
+        }
+        $.ajax({
+            url: 'http://127.0.0.1:8000/messagedata/',
+<!--            url: 'http://redditscrape.solvingresidentburnout.com/messagedata/',-->
+            type: 'post',
+            contentType: 'application/json',
+            data:JSON.stringify(my_data),
+            dataType: '',
+            success: function(data, textStatus, xhr)
+            {
+                var table;
+                table = $('#example').DataTable();
+                table.clear()
+                var width="10%"
+                for(var i=0;i<data.length;i++)
+                    {
+                        table.row.add([
+                        '<div style="text-align: center;">'+(i+1)+'</div>',
+                        '<div style="text-align: center;">'+data[i].name+'</div>',
+                        '<div style="text-align: center;">'+data[i].title+'</div>',
+                        '<div style="text-align: center;">'+data[i].subreddit+'</div>',
+                        '<div style="text-align: center;">'+data[i].keyword+'</div>',
+                        '<div style="text-align: center;">'+data[i].postingdate+'</div>',
+                        '<textarea name="'+data[i].name+'" id="'+data[i].name+'" cols="25" rows="2"></textarea>',
+                        "<button type='button' onclick='SendMessage("+JSON.stringify(data[i].name)+")' class='btn btn-default'>Send Message</button>",
+                        '<input type="checkbox" id="myCheck" style="display: inline;" name="myCheck" value="'+data[i].id+'">'
+                        ]);
+                    }
+                table.draw();
+
+            },
+            error: function (xhr, textStatus, errorThrown)
+            {
+                console.log('Error in Operation');
+                window.location = "/";
+            }
+        });
+    }
+
+    function SendMessage(username)
+    {
+        var myValues = username
+        var message = $('#'+username).val();
+        var my_data = {
+            "data":[
+                {
+                    "data": myValues,
+                    "message": message
+                }
+            ]
+        }
+        $.ajax({
+            url: 'http://127.0.0.1:8000/message/',
+<!--            url: 'http://redditscrape.solvingresidentburnout.com/message/',-->
+            type: 'post',
+            contentType: 'application/json',
+            data:JSON.stringify(my_data),
+            dataType: '',
+            success: function(data, textStatus, xhr)
+            {
+                window.location = "/sendmessage/0";
+                console.log('success')
+            },
+            error: function (xhr, textStatus, errorThrown)
+            {
+                console.log('Error in Operation');
+                window.location = "/";
+            }
+        });
+    }
+
+
+    //----------------------------------------for multiple deletion-----------------------------------------------------
+    function DeleteBtn()
+        {
+            var checkboxes = document.getElementsByName('myCheck');
+            var selected = [];
+            for (var i=0; i<checkboxes.length; i++)
+                {
+                    if (checkboxes[i].checked)
+                    {
+                        selected.push(checkboxes[i].value);
+                    }
+                }
+            if(selected.length == 0)
+            {
+                alert("Please Select Minimum One Option");
+            }
+            else
+            {
+                 $.ajax({
+                           url: "http://127.0.0.1:8000/delete/"+selected,
+<!--                           url: "http://redditscrape.solvingresidentburnout.com/delete/"+selected,-->
+                           type: 'delete',
+                           dataType: 'json',
+                           data: selected,
+                           success: function (data, textStatus, xhr)
+                           {
+                                    location.reload()
+                           },
+                           error: function (xhr, textStatus, errorThrown)
+                           {
+                                    console.log('Error in Operation');
+                           }
+                 });
+            }
+        };
+
+</script>
+</body>
+</html>
